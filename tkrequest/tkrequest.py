@@ -10,34 +10,17 @@ import sys, socket, webbrowser
 try:
     from .lib.info import __VERSION__
     from .lib.backwardcompat import *
+    from .lib.dump import plain
     from .lib.settings import Settings
 except:
     from lib.info import __VERSION__
     from lib.backwardcompat import *
+    from lib.dump import plain
     from lib.settings import Settings
 
 
 py_version = sys.version_info[:2]
 PY3 = py_version[0] == 3
-
-if PY3:
-    def _(msg):
-        return msg
-else:
-    try:
-        import chardet
-        def _(msg):
-            det = chardet.detect(msg)
-            encoding = det.get('encoding')
-            if encoding:
-                if encoding == 'MacCyrillic':   # !!! Windows-1251 as MacCyrillic
-                    encoding = 'Windows-1251'
-                return msg.decode(encoding, 'replace')
-            else:
-                return msg
-    except ImportError:
-        def _(msg):
-            return msg.decode('ascii', 'replace')
 
 
 company_section = "lishnih@gmail.com"
@@ -121,47 +104,18 @@ class AppUI(tkinter.Tk):
                 output.append("  {0}: {1}".format(h, v))
             output.append("")
 
-        except urllib2.HTTPError as e:
-            code = e.code
-            msg = e.reason
-            msg = _(msg)
-            output.append("HTTPError [{0}]: {1}".format(code, msg))
-
-        except urllib2.URLError as e:
-            msg = e.reason
-
-            if isinstance(msg, string_types):
-                msg = _(msg)
-                output.append("URLError: {0}".format(msg))
-            elif isinstance(msg, socket.error):
-                if PY3:
-                    msg = _(msg)
-                    output.append("URLError: {0}".format(msg))
-                else:
-                    errno, msg = msg
-                    msg = _(msg)
-                    output.append("URLError [{0}]: {1}".format(errno, msg))
-            else:
-                msg = _(msg)
-                output.append("URLError: {0}".format(msg))
-
-        except ValueError as e:
-            msg = e.message
-
-            msg = _(msg)
-            output.append("ValueError: {0}".format(msg))
+        except Exception as e:
+            output.append(plain(e))
 
         else:
             head = page.info()._headers if PY3 else page.info().headers
-            for i in head:
-                h = ": ".join(i).rstrip() if PY3 else _(i).rstrip()
-                output.append(h)
+            output.append(plain(head))
             output.append("")
 
-#             html = page.readlines()
-#             for i in html:
-#                 output.append(_(i).rstrip())
-#             output.append("")
+            html = page.readlines()
+            for i in html:
+                output.append(plain(i))
+            output.append("")
 
             returl = page.geturl()
             if returl != url:
