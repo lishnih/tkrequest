@@ -23,35 +23,34 @@ py_version = sys.version_info[:2]
 PY3 = py_version[0] == 3
 
 
-company_section = "lishnih@gmail.com"
-s = Settings(company_section)
+s = Settings()
 s.saveEnv()
 
 
-# recipe from http://effbot.org/zone/tkinter-menubar.htm
-class AppUI(tkinter.Tk):
+# recipe from http://effbot.org/zone/tk-menubar.htm
+class AppUI(tk.Tk):
     def __init__(self):
-        tkinter.Tk.__init__(self)
+        tk.Tk.__init__(self)
         self.title("tkRequest")
 
         self.Text = None
         self.Entry = None
 
-        self.url = tkinter.StringVar()
+        self.url = tk.StringVar()
 
-        self.status = tkinter.StringVar()
+        self.status = tk.StringVar()
         self.setStatus()
 
-        self.menubar = tkinter.Menu(self)
+        self.menubar = tk.Menu(self)
 
-        menu = tkinter.Menu(self.menubar, tearoff=0)
+        menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="Help", menu=menu)
         menu.add_command(command=self.onAbout, label="About")
 
         try:
             self.config(menu=self.menubar)
         except AttributeError:
-            # master is a toplevel window (Python 1.4/Tkinter 1.63)
+            # master is a toplevel window (Python 1.4/tk 1.63)
             self.tk.call(master, "config", "-menu", self.menubar)
 
     def assignText(self, Text):
@@ -61,8 +60,8 @@ class AppUI(tkinter.Tk):
         self.Entry = Entry
 
     def setText(self, text=""):
-        self.Text.delete(1.0, tkinter.END)
-        self.Text.insert(tkinter.INSERT, "{0}\n".format(text))
+        self.Text.delete(1.0, tk.END)
+        self.Text.insert(tk.INSERT, "{0}\n".format(text))
 
     def setEntry(self, values_list=[]):
         self.Entry['values'] = values_list
@@ -112,10 +111,10 @@ class AppUI(tkinter.Tk):
             output.append(plain(head))
             output.append("")
 
-            html = page.readlines()
-            for i in html:
-                output.append(plain(i))
-            output.append("")
+#             html = page.readlines()
+#             for i in html:
+#                 output.append(plain(i))
+#             output.append("")
 
             returl = page.geturl()
             if returl != url:
@@ -130,9 +129,9 @@ class AppUI(tkinter.Tk):
 def main():
     root = AppUI()
 
-    line1 = tkinter.Frame(root)
-    line2 = tkinter.Frame(root)
-    line3 = tkinter.Frame(root)
+    line1 = tk.Frame(root)
+    line2 = tk.Frame(root)
+    line3 = tk.Frame(root)
 
     # Address
     entry1 = ttk.Combobox(line1, textvariable=root.url)
@@ -141,40 +140,40 @@ def main():
     root.setEntry(urls)
     entry1.current(0)
 
-    button1 = tkinter.Button(line1, text="Request")
+    button1 = tk.Button(line1, text="Request")
 
     # Text Widget
     dFont1 = Font(family="Courier", size=9)
-    text1 = tkinter.Text(line2, font=dFont1)
+    text1 = tk.Text(line2, font=dFont1)
     root.assignText(text1)
-    text1_yscrollbar = tkinter.Scrollbar(line2, orient=tkinter.VERTICAL, command=text1.yview)
+    text1_yscrollbar = tk.Scrollbar(line2, orient=tk.VERTICAL, command=text1.yview)
     text1['yscrollcommand'] = text1_yscrollbar.set
 
     # Status
-    label1 = tkinter.Label(line3, textvariable=root.status, anchor=tkinter.W)
+    label1 = tk.Label(line3, textvariable=root.status, anchor=tk.W)
 
     # Pack
-    line1.pack(fill = 'x')
-    line2.pack(fill = 'both', expand = 1)
-    line3.pack(fill = 'x')
+    line1.pack(fill=tk.X)
+    line2.pack(fill=tk.BOTH, expand=1)
+    line3.pack(fill=tk.X)
 
-    entry1.pack(side = 'left', fill = 'x', expand = 1)
-    button1.pack(side = 'right')
+    entry1.pack(side=tk.LEFT, fill=tk.X, expand=1)
+    button1.pack(side=tk.RIGHT)
 
-    text1.pack(side = 'left', fill = 'both', expand = 1)
-    text1_yscrollbar.pack(side = 'right', fill = 'y')
+    text1.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+    text1_yscrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-    label1.pack(fill = 'x')
+    label1.pack(fill=tk.X)
 
     # Bind
     button1.bind("<Button-1>", root.onRequest)
     entry1.bind("<KeyPress-Return>", root.onRequest)
-    root.bind("<w>", root.onOpenLink)
+    root.bind("w", root.onOpenLink)
 
     # Main loop
+    root.update_idletasks()
+    root.minsize(root.winfo_reqwidth(), root.winfo_reqheight())
     root.mainloop()
-
-    s.save()
 
 
 

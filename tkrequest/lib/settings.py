@@ -8,9 +8,10 @@ from __future__ import ( division, absolute_import,
 import sys, os, re, time, pickle, logging
 
 try:
-    from .info import __VERSION__
+    try:    from .info import __VERSION__
+    except: from info import __VERSION__
 except:
-    from info import __VERSION__
+    __VERSION__ = '<undefined>'
 
 
 def save_entry(filename, entry):
@@ -33,19 +34,31 @@ def load_entry(filename):
 
 
 class Settings(object):
-    def __init__(self, company_section, app_section=None):
+    def __init__(self, name=None, app=None, location=None, for_instance=False):
         self.home = os.path.expanduser("~")
-        self.company_section = company_section
-        self.app_section = app_section if app_section else \
-                           re.sub(r'\W', '_', os.path.dirname(os.path.dirname(__file__)))
 
-        configdir = os.path.join(self.home, self.company_section)
-        self.filename = os.path.join(configdir, "{0}.pickle".format(self.app_section))
+        abspath = os.path.abspath(__file__)
+        self.instance = os.path.dirname(os.path.dirname(abspath))
+
+        _basename = os.path.basename(self.instance)
+        _instancename = re.sub(r'\W', '_', self.instance)
+
+        self.location = os.path.join(self.home, ".config") if location is None \
+            else self.expand_path(location)
+        self.app = _basename if app is None else app
+        self.name = _basename if name is None else name
+
+        if for_instance:
+            self.path = os.path.join(self.location, self.app, _instancename)
+        else:
+            self.path = os.path.join(self.location, self.app)
+        self.check_path(self.path)
+        self.filename = os.path.join(self.path, "{0}.pickle".format(self.name))
         self.settings = load_entry(self.filename)
 
 
-    def __del__(self):
-        pass
+#     def __del__(self):
+#         save_entry(self.filename, self.settings)
 
 
     def __iter__(self):
@@ -53,8 +66,12 @@ class Settings(object):
             yield key, self.settings[key]
 
 
-    def save(self):
+    def flush(self):
         save_entry(self.filename, self.settings)
+
+
+    def get_dict(self):
+        return self.settings
 
 
     def contains(self, key):
@@ -67,11 +84,13 @@ class Settings(object):
 
     def set(self, key, value):
         self.settings[key] = value
+        self.flush()
 
 
     def remove(self, key):
         if key in self.settings:
             del self.settings[key]
+        self.flush()
 
 
     def append(self, key, value, mode=0):
@@ -123,7 +142,7 @@ class Settings(object):
         self.set(d+"/Core", __VERSION__)
 
 
-    def set_path(self, key, default, check=None):
+    def init_path(self, key, default, check=None):
         value = self.get(key)
 
         if not value or not isinstance(value, basestring):
@@ -131,21 +150,33 @@ class Settings(object):
             self.set(key, value)
 
         if check and not self.check_path(value):
-            self.remove(key)
+            self.remove(key)    # !!!
+
+
+    def set_path(self, key, path, check=None):
+        value = self.expand_path(path)
+        self.set(key, value)
+
+        if check and not self.check_path(value):
+            self.remove(key)    # !!!
+
+
+    def expand_prefix(self, path):
+        if path == '~':
+            return self.home
+        elif path == '~~':
+            return os.path.join(self.location)
+        elif path == '~~~':
+            return os.path.join(self.path)
+        elif path == '$':
+            return self.instance
 
 
     def expand_path(self, path):
-        if path == '~':
-            home = os.path.expanduser("~")
-            return home
-        elif path == '~~':
-            home = os.path.expanduser("~")
-            value = os.path.join(home, self.company_section)
-            return value
-        elif path == '~~~':
-            home = os.path.expanduser("~")
-            value = os.path.join(home, self.company_section, self.app_section)
-            return value
+        res = re.match('(~{1,3}|\$)(.*)', path)
+        if res:
+            prefix, path = res.groups()
+            return os.path.join(self.expand_prefix(prefix), path)
         else:
             return path
 
@@ -160,21 +191,3 @@ class Settings(object):
         else:
             logging.error(u"Could not create directory: {0}".format(path))
             return False
-
-
-def main():
-    company_section = "lishnih@gmail.com"
-    s = Settings(company_section)
-    s.saveEnv()
-
-    s.set_path('companydata', '~~', True)
-    s.set_path('appdata',     '~~~', True)
-
-    for key, value in s:
-        print("{0:20}{1:16}{2}".format(key, type(value), value))
-
-    s.save()
-    
-
-if __name__ == '__main__':
-    main()

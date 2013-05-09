@@ -20,11 +20,7 @@ try:
 except IOError:
     README = CHANGES = ''
 
-if PY3:
-    install_requires = []
-else:
-    install_requires = [
-        'chardet',
+install_requires = [
     ]
 
 from tkrequest.lib.info import __VERSION__
@@ -39,7 +35,7 @@ if __name__ == '__main__':
         packages = ['tkrequest', 'tkrequest/lib'],
         scripts = [
             'scripts/run_tkrequest.py',
-            ],
+        ],
         package_data = dict(tkrequest=[]),
         description = 'Tk urllib Request',
         long_description = __doc__,

@@ -14,13 +14,14 @@ if sys.version_info >= (3,):
     from queue import Queue, Empty
     from urllib.request import url2pathname, urlretrieve
     from email import message as emailmessage
+    import socketserver as SocketServer
     import urllib.parse as urllib
     import urllib.request as urllib2
     import urllib.parse as urlparse
     import xmlrpc.client as xmlrpclib
     import http.client as httplib
 
-    import tkinter
+    import tkinter as tk
     from tkinter import ttk
     from tkinter.font import Font
     from tkinter.filedialog import askopenfilename, asksaveasfilename
@@ -58,13 +59,14 @@ else:
     from Queue import Queue, Empty
     from urllib import url2pathname, urlretrieve
     from email import Message as emailmessage
+    import SocketServer
     import urllib
     import urllib2
     import urlparse
     import xmlrpclib
     import httplib
 
-    import Tkinter as tkinter
+    import Tkinter as tk
     import ttk
     from tkFont import Font
     from tkFileDialog import askopenfilename, asksaveasfilename
