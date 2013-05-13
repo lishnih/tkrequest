@@ -65,5 +65,5 @@ def main():
     view_gui(s)
 
 
-if __name__ == "__main__" :
+if __name__ == '__main__':
     main()

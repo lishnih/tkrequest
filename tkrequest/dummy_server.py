@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
-# Stan 2012-09-06, 2013-05-01
+# Stan 2011-07-22
 
 from __future__ import ( division, absolute_import,
                          print_function, unicode_literals )
 
-import sys, socket, webbrowser
+import sys, threading, webbrowser
 
 try:
     from .lib.info import __VERSION__
@@ -19,10 +19,6 @@ except:
     from lib.settings import Settings
 
 
-py_version = sys.version_info[:2]
-PY3 = py_version[0] == 3
-
-
 s = Settings()
 s.saveEnv()
 
@@ -31,12 +27,12 @@ s.saveEnv()
 class AppUI(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
-        self.title("tkRequest")
+        self.title("tkDummyServer")
 
-        self.Text = None
-        self.Entry = None
+        self.server = None
 
-        self.url = tk.StringVar()
+        self.host = tk.StringVar()
+        self.port = tk.StringVar()
 
         self.status = tk.StringVar()
         self.setStatus()
@@ -56,16 +52,6 @@ class AppUI(tk.Tk):
     def assignText(self, Text):
         self.Text = Text
 
-    def assignEntry(self, Entry):
-        self.Entry = Entry
-
-    def setText(self, text=""):
-        self.Text.delete(1.0, tk.END)
-        self.Text.insert(tk.INSERT, "{0}\n".format(text))
-
-    def setEntry(self, values_list=[]):
-        self.Entry['values'] = values_list
-
     def setStatus(self, text=""):
         status = sys.executable
         if text:
@@ -75,57 +61,70 @@ class AppUI(tk.Tk):
     def onAbout(self):
         print("Version {0}".format(__VERSION__))
 
-    def onRequest(self, event=None):
-        url = self.url.get()
-        urls = s.insert("urls", 0, url, 2)
-        self.setEntry(urls)
-        output = self.request(url, [])
-        text = "\n".join(output)
-        self.setText(text)
+    def onStartServer(self, event=None):
+        if self.server is None:    
+            host = self.host.get()
+            port = self.port.get()
+            port = int(port) if port else 80
+
+            s.set('server_host', host)
+            s.set('server_port', port)
+
+            self.setStatus("Server started!")
+            t = threading.Thread(target=self.startServer, args=(host, port))
+            t.daemon = True
+            t.start()
+        else:            
+            self.setStatus()
+            self.server.shutdown()
+            self.server = None                        
+
+    def startServer(self, host, port):
+        self.server = MyServer((host, port), MyHandler, self.Text)
+        self.server.serve_forever()
 
     def onOpenLink(self, event=None):
+        host = self.host.get()
+        port = self.port.get()
+        if port:
+            port = ":" + port
+        url = "http://" + host + port
+
         if event.state == 4:
-            url = self.url.get()
             webbrowser.open(url)
         if event.state == 0:
             wtype = event.widget.winfo_class()
             if wtype not in ['Entry', 'Text', 'TCombobox']:
-                url = self.url.get()
                 webbrowser.open(url)
 
-    def request(self, url, output = [], level=0):
-        output.append("=== {0} ===".format(url))
 
-        try:
-            r = urllib2.Request(url)
-            page = urllib2.urlopen(r)
-            output.append(r.get_method())
-            output.append(r.get_type())
-            for h, v in r.header_items():
-                output.append("  {0}: {1}".format(h, v))
-            output.append("")
+# recipe from http://www.gossamer-threads.com/lists/python/python/573423
+class MyServer(SocketServer.ThreadingTCPServer): 
+    def __init__(self, server_address, RequestHandlerClass, Text): 
+        SocketServer.ThreadingTCPServer.__init__(self, server_address, RequestHandlerClass) 
+        self.Text = Text 
 
-        except Exception as e:
-            output.append(plain(e))
 
+class MyHandler(SocketServer.StreamRequestHandler):
+    def handle(self):
+        self.data = self.request.recv(1024).strip()
+        self.request.send(self.data)
+
+        text = "=== {0} ===\n{1}\n".format(self.client_address[0], self.data)
+
+        if self.server.Text:
+#           self.server.Text.delete(1.0, tk.END)
+            self.server.Text.insert(tk.END, text)
         else:
-            head = page.info()._headers if PY3 else page.info().headers
-            output.append(plain(head))
-            output.append("")
+            print(text)
 
-#             html = page.readlines()
-#             for i in html:
-#                 output.append(plain(i))
-#             output.append("")
 
-            returl = page.geturl()
-            if returl != url:
-                if level <= 15:
-                    self.request(returl, output, level+1)
-                else:
-                    pass
-
-        return output
+def validate_port(value):
+    if not value:
+        return True
+    if value.isdigit() and int(value) < 65536:
+        return True
+    return False
 
 
 def main():
@@ -135,14 +134,16 @@ def main():
     line2 = tk.Frame(root)
     line3 = tk.Frame(root)
 
-    # Address
-    entry1 = ttk.Combobox(line1, textvariable=root.url)
-    root.assignEntry(entry1)
-    urls = s.get('urls', ["http://localhost:80/"])
-    root.setEntry(urls)
-    entry1.current(0)
+    # Host / Port
+    entry1 = tk.Entry(line1, textvariable=root.host)
 
-    button1 = tk.Button(line1, text="Request")
+    vcmd = root.register(validate_port), '%P'
+    entry2 = tk.Entry(line1, textvariable=root.port, validate="key", validatecommand=vcmd)
+
+    root.host.set(s.get('server_host', 'localhost'))
+    root.port.set(s.get('server_port', '80'))
+
+    button1 = tk.Button(line1, text="Start/stop server")
 
     # Text Widget
     dFont1 = Font(family="Courier", size=9)
@@ -160,6 +161,7 @@ def main():
     line3.pack(fill=tk.X)
 
     entry1.pack(side=tk.LEFT, fill=tk.X, expand=1)
+    entry2.pack(side=tk.LEFT, fill=tk.X)
     button1.pack(side=tk.RIGHT)
 
     text1.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
@@ -168,9 +170,10 @@ def main():
     label1.pack(fill=tk.X)
 
     # Bind
-    button1.bind("<Button-1>", root.onRequest)
-    entry1.bind("<KeyPress-Return>", root.onRequest)
-    root.bind("w", root.onOpenLink)
+    button1.bind("<Button-1>", root.onStartServer)
+    entry1.bind("<KeyPress-Return>", root.onStartServer)
+    entry2.bind("<KeyPress-Return>", root.onStartServer)
+    root.bind("<w>", root.onOpenLink)
 
     # Main loop
     root.update_idletasks()
