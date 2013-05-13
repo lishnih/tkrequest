@@ -62,7 +62,7 @@ class AppUI(tk.Tk):
         print("Version {0}".format(__VERSION__))
 
     def onStartServer(self, event=None):
-        if self.server is None:    
+        if self.server is None:
             host = self.host.get()
             port = self.port.get()
             port = int(port) if port else 80
@@ -74,10 +74,10 @@ class AppUI(tk.Tk):
             t = threading.Thread(target=self.startServer, args=(host, port))
             t.daemon = True
             t.start()
-        else:            
+        else:
             self.setStatus()
             self.server.shutdown()
-            self.server = None                        
+            self.server = None
 
     def startServer(self, host, port):
         self.server = MyServer((host, port), MyHandler, self.Text)
@@ -99,10 +99,10 @@ class AppUI(tk.Tk):
 
 
 # recipe from http://www.gossamer-threads.com/lists/python/python/573423
-class MyServer(SocketServer.ThreadingTCPServer): 
-    def __init__(self, server_address, RequestHandlerClass, Text): 
-        SocketServer.ThreadingTCPServer.__init__(self, server_address, RequestHandlerClass) 
-        self.Text = Text 
+class MyServer(SocketServer.ThreadingTCPServer):
+    def __init__(self, server_address, RequestHandlerClass, Text):
+        SocketServer.ThreadingTCPServer.__init__(self, server_address, RequestHandlerClass)
+        self.Text = Text
 
 
 class MyHandler(SocketServer.StreamRequestHandler):
@@ -110,7 +110,7 @@ class MyHandler(SocketServer.StreamRequestHandler):
         self.data = self.request.recv(1024).strip()
         self.request.send(self.data)
 
-        text = "=== {0} ===\n{1}\n".format(self.client_address[0], u(self.data))
+        text = "=== {0} ===\n{1}\n".format(self.client_address[0], plain(self.data))
 
         if self.server.Text:
 #           self.server.Text.delete(1.0, tk.END)

@@ -183,11 +183,11 @@ class Settings(object):
 
     def check_path(self, path):
         if not os.path.exists(path):
-            logging.info(u"Creating directory: {0}".format(path))
+            logging.info("Creating directory: {0}".format(path))
             os.makedirs(path)
 
         if os.path.isdir(path):
             return True
         else:
-            logging.error(u"Could not create directory: {0}".format(path))
+            logging.error("Could not create directory: {0}".format(path))
             return False
