@@ -44,7 +44,7 @@ if __name__ == '__main__':
         keywords = ['Tk', 'urllib', 'Request'],
         install_requires = install_requires,
         classifiers = [
-            'Development Status :: 3 - Alpha',
+            'Development Status :: 4 - Beta',
             'Intended Audience :: Developers',
             'License :: Public Domain',
             'Operating System :: OS Independent',
