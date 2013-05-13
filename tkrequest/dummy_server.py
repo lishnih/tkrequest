@@ -110,7 +110,7 @@ class MyHandler(SocketServer.StreamRequestHandler):
         self.data = self.request.recv(1024).strip()
         self.request.send(self.data)
 
-        text = "=== {0} ===\n{1}\n".format(self.client_address[0], self.data)
+        text = "=== {0} ===\n{1}\n".format(self.client_address[0], u(self.data))
 
         if self.server.Text:
 #           self.server.Text.delete(1.0, tk.END)
