@@ -40,6 +40,10 @@ class AppUI(tk.Tk):
         self.menubar = tk.Menu(self)
 
         menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="File", menu=menu)
+        menu.add_command(command=self.quit, label="Exit")
+
+        menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="Help", menu=menu)
         menu.add_command(command=self.onAbout, label="About")
 

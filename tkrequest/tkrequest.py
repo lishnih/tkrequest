@@ -33,8 +33,8 @@ class AppUI(tk.Tk):
         tk.Tk.__init__(self)
         self.title("tkRequest")
 
-        self.Text = None
         self.Entry = None
+        self.Text = None
 
         self.url = tk.StringVar()
 
@@ -42,6 +42,10 @@ class AppUI(tk.Tk):
         self.setStatus()
 
         self.menubar = tk.Menu(self)
+
+        menu = tk.Menu(self.menubar, tearoff=0)
+        self.menubar.add_cascade(label="File", menu=menu)
+        menu.add_command(command=self.quit, label="Exit")
 
         menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="Help", menu=menu)
@@ -53,18 +57,19 @@ class AppUI(tk.Tk):
             # master is a toplevel window (Python 1.4/tk 1.63)
             self.tk.call(master, "config", "-menu", self.menubar)
 
-    def assignText(self, Text):
-        self.Text = Text
-
     def assignEntry(self, Entry):
         self.Entry = Entry
 
-    def setText(self, text=""):
-        self.Text.delete(1.0, tk.END)
-        self.Text.insert(tk.INSERT, "{0}\n".format(text))
+    def assignText(self, Text):
+        self.Text = Text
 
     def setEntry(self, values_list=[]):
         self.Entry['values'] = values_list
+
+    def setText(self, text=""):
+        if self.Text:
+            self.Text.delete(1.0, tk.END)
+            self.Text.insert(tk.INSERT, "{0}\n".format(text))
 
     def setStatus(self, text=""):
         status = sys.executable
@@ -113,10 +118,10 @@ class AppUI(tk.Tk):
             output.append(plain(head))
             output.append("")
 
-#             html = page.readlines()
-#             for i in html:
-#                 output.append(plain(i))
-#             output.append("")
+            html = page.readlines()
+            for i in html:
+                output.append(plain(i))
+            output.append("")
 
             returl = page.geturl()
             if returl != url:
