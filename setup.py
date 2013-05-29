@@ -23,12 +23,12 @@ except IOError:
 install_requires = [
     ]
 
-from tkrequest.lib.info import __VERSION__
+from tkrequest.lib.info import __version__
 
 if __name__ == '__main__':
     setup(
         name = 'tkrequest',
-        version = __VERSION__,
+        version = __version__,
         author = 'Stan',
         author_email = 'lishnih@gmail.com',
         url = 'http://github.com/lishnih/tkrequest',

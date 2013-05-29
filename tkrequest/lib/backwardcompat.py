@@ -74,6 +74,7 @@ else:
          askquestion, askokcancel, askyesno, askretrycancel)
 
 #   cmp = cmp
+    range = xrange
 
     def b(s):
         return s

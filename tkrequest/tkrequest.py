@@ -8,12 +8,12 @@ from __future__ import ( division, absolute_import,
 import sys, socket, webbrowser
 
 try:
-    from .lib.info import __VERSION__
+    from .lib.info import __version__
     from .lib.backwardcompat import *
     from .lib.dump import plain
     from .lib.settings import Settings
 except:
-    from lib.info import __VERSION__
+    from lib.info import __version__
     from lib.backwardcompat import *
     from lib.dump import plain
     from lib.settings import Settings
@@ -78,7 +78,7 @@ class AppUI(tk.Tk):
         self.status.set(status)
 
     def onAbout(self):
-        print("Version {0}".format(__VERSION__))
+        print("Version {0}".format(__version__))
 
     def onRequest(self, event=None):
         url = self.url.get()

@@ -8,15 +8,18 @@ from __future__ import ( division, absolute_import,
 import sys, os, re, time, pickle, logging
 
 try:
-    try:    from .info import __VERSION__
-    except: from info import __VERSION__
+    try:    from .info import __version__
+    except: from info import __version__
 except:
-    __VERSION__ = '<undefined>'
+    __version__ = '<undefined>'
 
 
 def save_entry(filename, entry):
     with open(filename, 'wb') as f:
-        pickle.dump(entry, f, 2)
+        try:
+            pickle.dump(entry, f, 2)
+        except pickle.PicklingError as e:
+            logging.error(e)
 
 
 def load_entry(filename):
@@ -138,8 +141,8 @@ class Settings(object):
         tt, ct = time.time(), time.ctime()
         self.set(d+"/time", tt)
         self.set(d+"/time_str", ct)
-        self.set(d+"/Python", sys.version)
-        self.set(d+"/Core", __VERSION__)
+        self.set(d+"/python", sys.version)
+        self.set(d+"/version", __version__)
 
 
     def init_path(self, key, default, check=None):
