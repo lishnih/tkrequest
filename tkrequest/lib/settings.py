@@ -30,7 +30,7 @@ def load_entry(filename):
                 try:
                     entry = pickle.load(f)
                 except Exception as e:
-                    logging.error("Unable read/parse file: {0}".format(filename))
+                    logging.error("Unable read/parse file: {0} [{1}]".format(filename, e))
         else:
             logging.error("{0} must be a file!".format(filename))
     return entry

@@ -11,9 +11,8 @@ except:
     from dump import *
 
 
-class propertyDialog(tk.Toplevel):
+class base_cls(object):
     def __init__(self, _dict):
-        tk.Toplevel.__init__(self)
         self.title("Property")
 
         frame = ttk.Frame(self, padding="3")
@@ -67,8 +66,7 @@ class propertyDialog(tk.Toplevel):
         if isinstance(obj, collections_types):
             i = 0
             for key in obj:
-                value = obj[i]
-                self.buildTree(value, i, item)
+                self.buildTree(key, i, item)
                 i += 1
             return
 
@@ -77,3 +75,15 @@ class propertyDialog(tk.Toplevel):
                 value = obj[key]
                 self.buildTree(value, key, item)
             return
+
+
+class rootDialog(tk.Tk, base_cls):
+    def __init__(self, _dict):
+        tk.Tk.__init__(self)
+        base_cls.__init__(self, _dict)        
+
+
+class propertyDialog(tk.Toplevel, base_cls):
+    def __init__(self, _dict):
+        tk.Toplevel.__init__(self)
+        base_cls.__init__(self, _dict)        
