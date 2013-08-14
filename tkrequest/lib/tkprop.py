@@ -80,10 +80,10 @@ class base_cls(object):
 class rootDialog(tk.Tk, base_cls):
     def __init__(self, _dict):
         tk.Tk.__init__(self)
-        base_cls.__init__(self, _dict)        
+        base_cls.__init__(self, _dict)
 
 
 class propertyDialog(tk.Toplevel, base_cls):
     def __init__(self, _dict):
         tk.Toplevel.__init__(self)
-        base_cls.__init__(self, _dict)        
+        base_cls.__init__(self, _dict)

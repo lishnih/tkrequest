@@ -14,54 +14,25 @@ except:
     __version__ = '<undefined>'
 
 
-def save_entry(filename, entry):
-    with open(filename, 'wb') as f:
-        try:
-            pickle.dump(entry, f, 2)
-        except pickle.PicklingError as e:
-            logging.error(e)
+if sys.version_info >= (3,):
+    basestring = str
+    class aStr():
+        def __str__(self):
+            return self.__unicode__()
+else:
+    class aStr():
+        def __str__(self):
+            return self.__unicode__().encode('utf-8')
 
 
-def load_entry(filename):
-    entry = {}
-    if os.path.exists(filename):
-        if os.path.isfile(filename):
-            with open(filename, 'rb') as f:
-                try:
-                    entry = pickle.load(f)
-                except Exception as e:
-                    logging.error("Unable read/parse file: {0} [{1}]".format(filename, e))
-        else:
-            logging.error("{0} must be a file!".format(filename))
-    return entry
+class aObject(object): pass
 
 
-class Settings(object):
-    def __init__(self, name=None, app=None, location=None, for_instance=False):
-        self.home = os.path.expanduser("~")
-
-        abspath = os.path.abspath(__file__)
-        self.instance = os.path.dirname(os.path.dirname(abspath))
-
-        _basename = os.path.basename(self.instance)
-        _instancename = re.sub(r'\W', '_', self.instance)
-
-        self.location = os.path.join(self.home, ".config") if location is None \
-            else self.expand_path(location)
-        self.app = _basename if app is None else app
-        self.name = _basename if name is None else name
-
-        if for_instance:
-            self.path = os.path.join(self.location, self.app, _instancename)
-        else:
-            self.path = os.path.join(self.location, self.app)
-        self.check_path(self.path)
-        self.filename = os.path.join(self.path, "{0}.pickle".format(self.name))
-        self.settings = load_entry(self.filename)
-
-
-#     def __del__(self):
-#         save_entry(self.filename, self.settings)
+class SettingsGroup(object):
+    def __init__(self, settings={}, filename=None):
+        self.settings = settings
+        if filename:
+            self.load(filename)
 
 
     def __iter__(self):
@@ -69,31 +40,102 @@ class Settings(object):
             yield key, self.settings[key]
 
 
-    def flush(self):
-        save_entry(self.filename, self.settings)
+    def __str__(self):
+        return self.__unicode__().encode('utf-8')
+
+
+    def __unicode__(self):
+        str = "{0}".format(type(self))
+        for key, value in self:
+            str += "\n    {0:20}: {1:16}{2}".format(key, type(value), value)
+        return str
+
+
+    def load(self, filename):
+        self.system.filename = filename
+
+        if not os.path.exists(filename):
+            logging.warning("{0} not exists!".format(filename))
+            return
+        if not os.path.isfile(filename):
+            logging.error("{0} must be a file!".format(filename))
+            return
+
+        try:
+            with open(filename, 'rb') as f:
+                self.settings = pickle.load(f)
+        except Exception as e:
+            logging.error("Unable to read/parse file: {0} [{1}]".format(filename, e))
+
+
+    def save(self):
+        if not self.system.filename:
+            logging.warning("File is not specified!")
+            return
+
+        try:
+            with open(self.system.filename, 'wb') as f:
+                pickle.dump(self.settings, f, 2)
+        except pickle.PicklingError as e:
+            logging.error("Unable to write file: {0} [{1}]".format(self.system.filename, e))
 
 
     def get_dict(self):
         return self.settings
 
 
+    def get_group(self, key):
+        settings = self.get(key, {}, parse=False)
+        group = SettingsGroup(settings)
+        group.system = self.system
+        return group
+
+
+# Работа с ключами
+
+
     def contains(self, key):
         return key in self.settings
 
 
-    def get(self, key, default=None):
-        return self.settings.setdefault(key, default)
+    def get(self, key, default=None, parse=True):
+        if key not in self.settings:
+            self.settings[key] = default
+            self.system.flush()
+
+        value = self.settings[key]
+        if parse:
+            value = self.parse(value)
+        return value
 
 
     def set(self, key, value):
         self.settings[key] = value
-        self.flush()
+        self.system.flush()
 
 
     def remove(self, key):
         if key in self.settings:
             del self.settings[key]
-        self.flush()
+            self.system.flush()
+
+
+    def clean(self):
+        self.settings = {}
+        self.system.flush()
+
+
+    def parse(self, value):
+        if isinstance(value, basestring):
+            res = re.match(r'(~{1,3}|\$)[\/]?(.*)', value)
+            if res:
+                prefix, value = res.groups()
+                value = os.path.join(self.expand_prefix(prefix), value)
+
+        return value
+
+
+# Работа с ключами (списки)
 
 
     def append(self, key, value, mode=0):
@@ -126,6 +168,51 @@ class Settings(object):
         return values_list
 
 
+# Работа с ключами (директории)
+
+
+    def get_path(self, key, default=None, check=None):
+        value = self.get(key, default)
+
+        if check and not self.check_path(value):
+            self.remove(key)
+            return
+
+        return value
+
+
+    def set_path(self, key, path, check=None):
+        self.set(key, path)
+        if check:
+            self.get_path(key, check=check)
+
+
+    def expand_prefix(self, path):
+        if path == '~':
+            return self.system.home
+        elif path == '~~':
+            return os.path.join(self.system.location)
+        elif path == '~~~':
+            return os.path.join(self.system.path)
+        elif path == '$':
+            return self.system.instance
+
+
+    def check_path(self, path):
+        if not os.path.exists(path):
+            logging.info("Creating directory: {0}".format(path))
+            os.makedirs(path)
+
+        if os.path.isdir(path):
+            return True
+        else:
+            logging.error("Could not create directory: {0}".format(path))
+            return False
+
+
+# Утилиты
+
+
     def saveEnv(self):
         if not self.contains("firsttime/time"):
             self.saveEnv_d("firsttime")
@@ -145,52 +232,48 @@ class Settings(object):
         self.set(d+"/version", __version__)
 
 
-    def init_path(self, key, default, check=None):
-        value = self.get(key)
+# name         - имя файла настроек
+# app          - путь файла настроек
+# location     - расположение директории для всех настроек
+# for_instance - загружить настройки для конкретного приложения
+# filename     - загружить настройки из указанного файла,
+#                остальные параметры принимаются для текущего расположения
+class Settings(SettingsGroup):
+    def __init__(self, name=None, app=None, location=None, for_instance=False,
+                 filename=None):
+        self.system = aObject()
+        self.system.flush = self.flush
 
-        if not value or not isinstance(value, basestring):
-            value = self.expand_path(default)
-            self.set(key, value)
+        self.system.home = os.path.expanduser("~")
 
-        if check and not self.check_path(value):
-            self.remove(key)    # !!!
+        abspath = os.path.abspath(__file__)
+        self.system.instance = os.path.dirname(os.path.dirname(abspath))
 
+        _basename = os.path.basename(self.system.instance)
+        _instancename = re.sub(r'\W', '_', self.system.instance)
 
-    def set_path(self, key, path, check=None):
-        value = self.expand_path(path)
-        self.set(key, value)
+        self.system.location = os.path.join(self.system.home, ".config") if location is None \
+            else self.expand_path(location)
+        self.system.app = _basename if app is None else app
+        self.system.name = _basename if name is None else name
 
-        if check and not self.check_path(value):
-            self.remove(key)    # !!!
-
-
-    def expand_prefix(self, path):
-        if path == '~':
-            return self.home
-        elif path == '~~':
-            return os.path.join(self.location)
-        elif path == '~~~':
-            return os.path.join(self.path)
-        elif path == '$':
-            return self.instance
-
-
-    def expand_path(self, path):
-        res = re.match('(~{1,3}|\$)(.*)', path)
-        if res:
-            prefix, path = res.groups()
-            return os.path.join(self.expand_prefix(prefix), path)
+        if for_instance:
+            self.system.path = os.path.join(self.system.location, self.system.app, _instancename)
         else:
-            return path
+            self.system.path = os.path.join(self.system.location, self.system.app)
+        self.check_path(self.system.path)
+
+        if not filename:
+            filename = os.path.join(self.system.path, "{0}.pickle".format(self.system.name))
+        SettingsGroup.__init__(self, filename=filename)
 
 
-    def check_path(self, path):
-        if not os.path.exists(path):
-            logging.info("Creating directory: {0}".format(path))
-            os.makedirs(path)
+    def flush(self):
+        self.save()
 
-        if os.path.isdir(path):
-            return True
-        else:
-            logging.error("Could not create directory: {0}".format(path))
-            return False
+
+    def get_systems(self):
+        return [(i, getattr(self.system, i)) for i in dir(self.system) if i[0] != '_']
+
+    def get_filename(self):
+        return self.system.filename
