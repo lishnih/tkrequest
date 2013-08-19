@@ -194,7 +194,7 @@ Package: {4}
                         if i[0] != '_':
                             value = getattr(module, i)
                             if isinstance(value, all_types):
-                                BRANCH.get(i, value)    # get is set_default
+                                BRANCH.set(i, value)
 
             message = "Processed pickles:\n" + plain(pickles) + "\n\n" +\
                       "Note: Empty pickles was not created!"
@@ -236,7 +236,7 @@ Package: {4}
                     if i[0] != '_':
                         value = getattr(module, i)
                         if isinstance(value, all_types):
-                            BRANCH.get(i, value)    # get is set_default
+                            BRANCH.set(i, value)
 
                 self.showInfo()
 
@@ -263,7 +263,7 @@ Package: {4}
                         if i[0] != '_':
                             value = getattr(module, i)
                             if isinstance(value, all_types):
-                                BRANCH.get(i, value)    # get is set_default
+                                BRANCH.set(i, value)
 
             self.showInfo()
 

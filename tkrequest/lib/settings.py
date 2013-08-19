@@ -65,7 +65,7 @@ class SettingsGroup(object):
             with open(filename, 'rb') as f:
                 self.settings = pickle.load(f)
         except Exception as e:
-            logging.error("Unable to read/parse file: {0} [{1}]".format(filename, e))
+            logging.exception("Unable to read/parse file: {0} [{1}]".format(filename, e))
 
 
     def save(self):
@@ -77,7 +77,7 @@ class SettingsGroup(object):
             with open(self.system.filename, 'wb') as f:
                 pickle.dump(self.settings, f, 2)
         except pickle.PicklingError as e:
-            logging.error("Unable to write file: {0} [{1}]".format(self.system.filename, e))
+            logging.exception("Unable to write file: {0} [{1}]".format(self.system.filename, e))
 
 
     def get_dict(self):
