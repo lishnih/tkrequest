@@ -7,13 +7,13 @@ from __future__ import ( division, absolute_import,
 
 try:
     from .lib.backwardcompat import *
-    from .lib.info import (__pkgname__, __description__, __version__)
+    from .lib.info import __pkgname__, __description__, __version__
     from .lib.dump import plain
     from .lib.settings import Settings
     from .lib.tkprop import propertyDialog
 except:
     from lib.backwardcompat import *
-    from lib.info import (__pkgname__, __description__, __version__)
+    from lib.info import __pkgname__, __description__, __version__
     from lib.dump import plain
     from lib.settings import Settings
     from lib.tkprop import propertyDialog
