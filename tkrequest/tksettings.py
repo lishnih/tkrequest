@@ -258,7 +258,7 @@ Package: {4}
                         BRANCH = self.s.get_group(branch)
                     else:
                         BRANCH = self.s
-    
+
                     for i in dir(module):
                         if i[0] != '_':
                             value = getattr(module, i)

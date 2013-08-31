@@ -8,12 +8,12 @@ from __future__ import ( division, absolute_import,
 import sys, threading, webbrowser
 
 try:
-    from .lib.info import __version__
+    from .lib.info import __pkgname__, __description__, __version__
     from .lib.backwardcompat import *
     from .lib.dump import plain
     from .lib.settings import Settings
 except:
-    from lib.info import __version__
+    from lib.info import __pkgname__, __description__, __version__
     from lib.backwardcompat import *
     from lib.dump import plain
     from lib.settings import Settings
@@ -23,19 +23,75 @@ s = Settings()
 s.saveEnv()
 
 
-# recipe from http://effbot.org/zone/tk-menubar.htm
+class ScrolledText(tk.Frame):
+    def __init__(self, parent=None):
+        tk.Frame.__init__(self, parent)
+
+        self.text = tk.Text(self, relief=tk.SUNKEN)
+        self.text.pack(fill=tk.BOTH, side=tk.LEFT, expand=tk.YES)
+
+        sbar = tk.Scrollbar(self)
+        sbar.pack(fill=tk.Y, side=tk.RIGHT)
+        sbar.config(command=self.text.yview)
+
+        self.text.config(yscrollcommand=sbar.set)
+        self.text.config(font=('Courier', 9, 'normal'))
+
+    def appendText(self, text=""):
+        self.text.insert(tk.END, text)
+#       self.text.mark_set(tk.INSERT, "1.0")
+        self.text.focus()
+
+    def setText(self, text=""):
+        self.text.delete(1.0, tk.END)
+        self.appendText(text)
+
+    def getText(self):
+        return self.text.get("1.0", tk.END+'-1c')
+
+    def bind(self, event, handler, add=None):
+        self.text.bind(event, handler, add)
+
+
+class StatusBar(tk.Frame):
+    def __init__(self, parent=None):
+        tk.Frame.__init__(self, parent)
+
+        self.labels = {}
+
+    def setLabel(self, name=0, side=tk.LEFT, **kargs):
+        label = tk.Label(self, bd=1, relief=tk.SUNKEN, anchor=tk.W, **kargs)
+        label.pack(side=side)
+        self.labels[name] = label
+
+        return label
+
+    def setText(self, text="", name=0):
+        if name in self.labels:
+            label = self.labels[name]
+        else:
+            label = self.setLabel(name)
+            self.labels[name] = label
+
+        status = sys.executable
+        if text:
+            status += " :: " + text
+        label.config(text=status)
+
+
 class AppUI(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
         self.title("tkDummyServer")
+
+        ### Vars ###
 
         self.server = None
 
         self.host = tk.StringVar()
         self.port = tk.StringVar()
 
-        self.status = tk.StringVar()
-        self.setStatus()
+        ### Menu ###
 
         self.menubar = tk.Menu(self)
 
@@ -45,25 +101,61 @@ class AppUI(tk.Tk):
 
         menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="Help", menu=menu)
-        menu.add_command(command=self.onAbout, label="About")
+        menu.add_command(command=self.onHelpAbout, label="About")
 
-        try:
-            self.config(menu=self.menubar)
-        except AttributeError:
-            # master is a toplevel window (Python 1.4/tk 1.63)
-            self.tk.call(master, "config", "-menu", self.menubar)
+        self.config(menu=self.menubar)
 
-    def assignText(self, Text):
-        self.Text = Text
+        ### Widgets ###
 
-    def setStatus(self, text=""):
-        status = sys.executable
-        if text:
-            status += " :: " + text
-        self.status.set(status)
+        # Host / Port
+        line1 = tk.Frame(self)
 
-    def onAbout(self):
-        print("Version {0}".format(__version__))
+        entry1 = tk.Entry(line1, textvariable=self.host)
+        entry1.pack(side=tk.LEFT, fill=tk.X, expand=1)
+
+        vcmd = self.register(validate_port), '%P'
+        entry2 = tk.Entry(line1, textvariable=self.port, validate="key", validatecommand=vcmd)
+        entry2.pack(side=tk.LEFT, fill=tk.X)
+
+        self.host.set(s.get('server_host', 'localhost'))
+        self.port.set(s.get('server_port', '80'))
+
+        button1 = tk.Button(line1, text="Start/stop server")
+        button1.pack(side=tk.RIGHT)
+
+        line1.pack(fill=tk.X)
+
+        # Text Widget
+        self.text = ScrolledText(self)
+        self.text.pack(fill=tk.BOTH, expand=tk.YES)
+
+        # Status
+        self.status = StatusBar(self)
+        self.status.pack(fill=tk.X)
+
+        ### Bind ###
+
+        button1.bind("<Button-1>", self.onStartServer)
+        entry1.bind("<KeyPress-Return>", self.onStartServer)
+        entry2.bind("<KeyPress-Return>", self.onStartServer)
+        self.bind("<w>", self.onOpenLink)
+
+        ### Initial ###
+
+        self.status.setText()
+
+        self.update_idletasks()
+        self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
+
+    ### Events ###
+
+    def onHelpAbout(self, event=None):
+        text = """{0}\n{1}\nVersion {2}\n
+Python: {3}
+Package: {4}
+""".format(__pkgname__, __description__, __version__,
+           sys.version, __package__)
+        showinfo("About", text)
 
     def onStartServer(self, event=None):
         if self.server is None:
@@ -74,18 +166,14 @@ class AppUI(tk.Tk):
             s.set('server_host', host)
             s.set('server_port', port)
 
-            self.setStatus("Server started!")
+            self.status.setText("Server started!")
             t = threading.Thread(target=self.startServer, args=(host, port))
             t.daemon = True
             t.start()
         else:
-            self.setStatus()
+            self.status.setText()
             self.server.shutdown()
             self.server = None
-
-    def startServer(self, host, port):
-        self.server = MyServer((host, port), MyHandler, self.Text)
-        self.server.serve_forever()
 
     def onOpenLink(self, event=None):
         host = self.host.get()
@@ -101,12 +189,18 @@ class AppUI(tk.Tk):
             if wtype not in ['Entry', 'Text', 'TCombobox']:
                 webbrowser.open(url)
 
+    ### Functions ###
+
+    def startServer(self, host, port):
+        self.server = MyServer((host, port), MyHandler, self.text)
+        self.server.serve_forever()
+
 
 # recipe from http://www.gossamer-threads.com/lists/python/python/573423
 class MyServer(SocketServer.ThreadingTCPServer):
-    def __init__(self, server_address, RequestHandlerClass, Text):
+    def __init__(self, server_address, RequestHandlerClass, scrolled_text):
         SocketServer.ThreadingTCPServer.__init__(self, server_address, RequestHandlerClass)
-        self.Text = Text
+        self.text = scrolled_text
 
 
 class MyHandler(SocketServer.StreamRequestHandler):
@@ -116,9 +210,8 @@ class MyHandler(SocketServer.StreamRequestHandler):
 
         text = "=== {0} ===\n{1}\n".format(self.client_address[0], plain(self.data))
 
-        if self.server.Text:
-#           self.server.Text.delete(1.0, tk.END)
-            self.server.Text.insert(tk.END, text)
+        if self.server.text:
+            self.server.text.setText(text)
         else:
             print(text)
 
@@ -134,57 +227,10 @@ def validate_port(value):
 def main():
     root = AppUI()
 
-    line1 = tk.Frame(root)
-    line2 = tk.Frame(root)
-    line3 = tk.Frame(root)
-
-    # Host / Port
-    entry1 = tk.Entry(line1, textvariable=root.host)
-
-    vcmd = root.register(validate_port), '%P'
-    entry2 = tk.Entry(line1, textvariable=root.port, validate="key", validatecommand=vcmd)
-
-    root.host.set(s.get('server_host', 'localhost'))
-    root.port.set(s.get('server_port', '80'))
-
-    button1 = tk.Button(line1, text="Start/stop server")
-
-    # Text Widget
-    dFont1 = Font(family="Courier", size=9)
-    text1 = tk.Text(line2, font=dFont1)
-    root.assignText(text1)
-    text1_yscrollbar = tk.Scrollbar(line2, orient=tk.VERTICAL, command=text1.yview)
-    text1['yscrollcommand'] = text1_yscrollbar.set
-
-    # Status
-    label1 = tk.Label(line3, textvariable=root.status, anchor=tk.W)
-
-    # Pack
-    line1.pack(fill=tk.X)
-    line2.pack(fill=tk.BOTH, expand=1)
-    line3.pack(fill=tk.X)
-
-    entry1.pack(side=tk.LEFT, fill=tk.X, expand=1)
-    entry2.pack(side=tk.LEFT, fill=tk.X)
-    button1.pack(side=tk.RIGHT)
-
-    text1.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-    text1_yscrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-    label1.pack(fill=tk.X)
-
-    # Bind
-    button1.bind("<Button-1>", root.onStartServer)
-    entry1.bind("<KeyPress-Return>", root.onStartServer)
-    entry2.bind("<KeyPress-Return>", root.onStartServer)
-    root.bind("<w>", root.onOpenLink)
-
-    # Main loop
-    root.update_idletasks()
-    root.minsize(root.winfo_reqwidth(), root.winfo_reqheight())
     root.mainloop()
 
 
-
 if __name__ == '__main__':
+#   logging.basicConfig(level=logging.INFO)
+
     main()

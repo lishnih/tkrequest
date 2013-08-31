@@ -143,7 +143,6 @@ class AppUI(tk.Tk):
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
 
-
     ### Events ###
 
     def onHelpAbout(self, event=None):
@@ -172,13 +171,13 @@ Package: {4}
             self.text.appendText("\n"+text)
 
     def onOpenLink(self, event=None):
+        url = self.url.get()
+
         if event.state == 4:
-            url = self.url.get()
             webbrowser.open(url)
         if event.state == 0:
             wtype = event.widget.winfo_class()
             if wtype not in ['Entry', 'Text', 'TCombobox']:
-                url = self.url.get()
                 webbrowser.open(url)
 
     ### Functions ###
