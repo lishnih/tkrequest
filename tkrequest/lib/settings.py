@@ -99,11 +99,7 @@ class SettingsGroup(object):
 
 
     def get(self, key, default=None, parse=True):
-        if key not in self.settings:
-            self.settings[key] = default
-            self.system.flush()
-
-        value = self.settings[key]
+        value = self.settings.get(key, default)
         if parse:
             value = self.parse(value)
         return value
@@ -112,6 +108,11 @@ class SettingsGroup(object):
     def set(self, key, value):
         self.settings[key] = value
         self.system.flush()
+
+
+    def set_default(self, key, default=None):
+        if key not in self.settings:
+            self.set(key, default)
 
 
     def remove(self, key):

@@ -208,12 +208,21 @@ class MyHandler(SocketServer.StreamRequestHandler):
         self.data = self.request.recv(1024).strip()
         self.request.send(self.data)
 
-        text = "=== {0} ===\n{1}\n".format(self.client_address[0], plain(self.data))
+        url = self.client_address[0]
+        text = plain(self.data)
 
         if self.server.text:
-            self.server.text.setText(text)
+            self.server.text.setText()
+            self.server.text.text.tag_config("url", background="yellow", foreground="blue")
+
+            start = self.server.text.text.index(tk.CURRENT)
+            self.server.text.appendText(url)
+            stop = self.server.text.text.index(tk.CURRENT)
+            self.server.text.text.tag_add("url", start, stop)
+
+            self.server.text.appendText("\n\n" + text)
         else:
-            print(text)
+            print(url, text)
 
 
 def validate_port(value):

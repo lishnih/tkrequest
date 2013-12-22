@@ -120,7 +120,6 @@ Package: {4}
         if module:
             p = multiprocessing.Process(target=module.main)
             p.start()
-            p.join()
 
 
 

@@ -168,7 +168,7 @@ Package: {4}
             self.text.text.tag_add("url", start, stop)
 
             text = "\n".join(output)
-            self.text.appendText("\n"+text)
+            self.text.appendText("\n" + text)
 
     def onOpenLink(self, event=None):
         url = self.url.get()
